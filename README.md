@@ -22,26 +22,26 @@ A comprehensive Next.js application for automating social media content creation
 ## Getting Started
 
 1. Clone the repository:
-\`\`\`bash
+```bash
 git clone <repository-url>
 cd social-media-automation
-\`\`\`
+```
 
 2. Install dependencies:
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 3. Run the development server:
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
-\`\`\`
+```
 ├── app/                    # Next.js App Router pages
 │   ├── auth/              # Authentication pages
 │   ├── onboarding/        # User onboarding flow
@@ -59,7 +59,7 @@ npm run dev
 │   └── ...               # Feature-specific components
 ├── lib/                  # Utility functions
 └── hooks/                # Custom React hooks
-\`\`\`
+```
 
 ## Key Features
 
@@ -96,9 +96,9 @@ The project uses Tailwind CSS with a custom design system. Colors and spacing ar
 
 The application is ready for deployment on Vercel:
 
-\`\`\`bash
+```bash
 npm run build
-\`\`\`
+```
 
 ## Contributing
 
