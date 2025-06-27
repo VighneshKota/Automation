@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,12 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bell, Settings, LogOut, Menu, X } from "lucide-react"
-import { useState } from "react"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 
 export default function DashboardHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { user, userProfile, signOut } = useAuth()
 
   const navigation = [
     { name: "Dashboard", href: "/app/dashboard" },
@@ -26,6 +28,19 @@ export default function DashboardHeader() {
     { name: "Video", href: "/app/video" },
     { name: "Settings", href: "/app/settings" },
   ]
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+  }
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-40">
@@ -64,15 +79,21 @@ export default function DashboardHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>AJ</AvatarFallback>
+                    <AvatarFallback>
+                      {userProfile?.full_name ? getInitials(userProfile.full_name) : 'U'}
+                    </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Alex Johnson</p>
-                    <p className="text-xs leading-none text-muted-foreground">alex@example.com</p>
+                    <p className="text-sm font-medium leading-none">
+                      {userProfile?.full_name || 'User'}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -82,7 +103,7 @@ export default function DashboardHeader() {
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -115,6 +136,15 @@ export default function DashboardHeader() {
                 {item.name}
               </Link>
             ))}
+            <div className="pt-4 border-t border-border">
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-3 py-2 text-base font-medium text-muted-foreground hover:bg-muted rounded-md"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

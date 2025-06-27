@@ -30,7 +30,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">I Content Team</h1>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">Social Media Automation</h1>
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Automate your social media presence with AI agents specialized for each platform
           </p>

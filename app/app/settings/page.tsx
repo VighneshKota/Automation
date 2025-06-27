@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,10 +9,28 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import DashboardHeader from "@/components/dashboard-header"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
+import type { User } from '@supabase/supabase-js'
+
+type AccountSettings = {
+  name: string
+  email: string
+  notifications: {
+    email: boolean
+    push: boolean
+    contentSuggestions: boolean
+  }
+}
 
 export default function SettingsPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
   const [contentDna, setContentDna] = useState({
     product: "AI-powered medical billing software",
     audience: "Independent medical practices with 1-5 doctors",
@@ -19,9 +38,9 @@ export default function SettingsPage() {
     style: "Professional with occasional humor",
   })
 
-  const [accountSettings, setAccountSettings] = useState({
-    name: "Alex Johnson",
-    email: "alex@example.com",
+  const [accountSettings, setAccountSettings] = useState<AccountSettings>({
+    name: "",
+    email: "",
     notifications: {
       email: true,
       push: true,
@@ -30,7 +49,42 @@ export default function SettingsPage() {
   })
 
   const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setUser(session.user)
+        
+        // Get user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        setUserProfile(profile)
+        
+        // Update account settings with real data
+        setAccountSettings({
+          name: profile?.full_name || "",
+          email: session.user.email || "",
+          notifications: {
+            email: true,
+            push: true,
+            contentSuggestions: true,
+          },
+        })
+      } else {
+        router.push('/auth')
+      }
+      setIsLoading(false)
+    }
+
+    getCurrentUser()
+  }, [router])
 
   const handleContentDnaChange = (field: string, value: string) => {
     setContentDna({
@@ -42,41 +96,99 @@ export default function SettingsPage() {
   const handleAccountChange = (field: string, value: string | boolean) => {
     if (field.includes(".")) {
       const [parent, child] = field.split(".")
-      setAccountSettings({
-        ...accountSettings,
-        [parent]: {
-          ...accountSettings[parent as keyof typeof accountSettings],
-          [child]: value,
-        },
-      })
+      if (parent === "notifications") {
+        setAccountSettings(prev => ({
+          ...prev,
+          notifications: {
+            ...prev.notifications,
+            [child]: value as boolean,
+          },
+        }))
+      }
     } else {
-      setAccountSettings({
-        ...accountSettings,
+      setAccountSettings(prev => ({
+        ...prev,
         [field]: value,
-      })
+      }))
     }
   }
 
   const handleSaveContentDna = async () => {
     setIsSaving(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    toast({
-      title: "Content DNA saved",
-      description: "Your content DNA has been updated successfully.",
-    })
+    setError(null)
+    
+    try {
+      // Simulate API call for now - you can extend this to save to a content_dna table
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      
+      toast({
+        title: "Content DNA saved",
+        description: "Your content DNA has been updated successfully.",
+      })
+    } catch (error) {
+      setError('Failed to save content DNA')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSaveAccount = async () => {
     setIsSaving(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSaving(false)
-    toast({
-      title: "Account settings saved",
-      description: "Your account settings have been updated successfully.",
-    })
+    setError(null)
+    
+    try {
+      if (!user) {
+        throw new Error('No user found')
+      }
+
+      // Update profile in Supabase
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: accountSettings.name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
+
+      if (profileError) {
+        throw profileError
+      }
+
+      // Update user email if changed
+      if (accountSettings.email !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: accountSettings.email
+        })
+        
+        if (emailError) {
+          throw emailError
+        }
+      }
+
+      toast({
+        title: "Account settings saved",
+        description: "Your account settings have been updated successfully.",
+      })
+    } catch (error: any) {
+      setError(error.message || 'Failed to save account settings')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <DashboardHeader />
+        <main className="flex-1 container py-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
+            <div className="h-64 bg-muted rounded"></div>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -86,6 +198,12 @@ export default function SettingsPage() {
       <main className="flex-1 container py-6">
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
         <p className="text-muted-foreground mb-8">Manage your profile and preferences</p>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <Tabs defaultValue="content-dna" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
@@ -158,6 +276,7 @@ export default function SettingsPage() {
                     id="name"
                     value={accountSettings.name}
                     onChange={(e) => handleAccountChange("name", e.target.value)}
+                    placeholder="Enter your full name"
                   />
                 </div>
 
@@ -168,7 +287,11 @@ export default function SettingsPage() {
                     type="email"
                     value={accountSettings.email}
                     onChange={(e) => handleAccountChange("email", e.target.value)}
+                    placeholder="Enter your email address"
                   />
+                  <p className="text-sm text-muted-foreground">
+                    You'll need to verify your email if you change it.
+                  </p>
                 </div>
 
                 <div className="space-y-4">
