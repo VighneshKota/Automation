@@ -5,13 +5,14 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/lib/auth-context"
+import { ToastProvider } from "@/hooks/use-toast"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "AI Content Team | Social Media Automation",
   description: "Automate your social media presence with AI agents specialized for each platform",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -24,8 +25,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            {children}
-            <Toaster />
+            <ToastProvider>
+              {children}
+              <Toaster />
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

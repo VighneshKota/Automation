@@ -1,9 +1,8 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Brain, Zap, BarChart, Globe } from "lucide-react"
-import SocialProof from "@/components/social-proof"
-import BenefitsSection from "@/components/benefits-section"
-import TestimonialsSection from "@/components/testimonials-section"
+import { useToast } from "@/hooks/use-toast"
+import { ToastProvider } from "@/hooks/use-toast"
 
 export default function LandingPage() {
   return (
@@ -48,13 +47,13 @@ export default function LandingPage() {
       </section>
 
       {/* Social Proof */}
-      <SocialProof />
+      {/* <SocialProof /> */}
 
       {/* Benefits Section */}
-      <BenefitsSection />
+      {/* <BenefitsSection /> */}
 
       {/* Testimonials */}
-      <TestimonialsSection />
+      {/* <TestimonialsSection /> */}
 
       {/* CTA Section */}
       <section className="bg-primary text-primary-foreground py-16">

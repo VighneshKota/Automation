@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, CheckCircle, Mail, ArrowLeft } from 'lucide-react'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -18,6 +18,9 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('signin')
+  const [showEmailVerification, setShowEmailVerification] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
 
   // Form states
   const [signInEmail, setSignInEmail] = useState('')
@@ -33,18 +36,9 @@ export default function AuthPage() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        // Check if onboarding is completed
-        const { data: onboarding } = await supabase
-          .from('onboarding')
-          .select('completed')
-          .eq('user_id', session.user.id)
-          .single()
-
-        if (onboarding?.completed) {
-          router.push('/app/dashboard')
-        } else {
-          router.push('/onboarding')
-        }
+        // Skip database check for now - just redirect to onboarding
+        // The onboarding page will handle the database check
+        router.push('/onboarding')
       }
     }
 
@@ -67,33 +61,28 @@ export default function AuthPage() {
         if (error.message.includes('Email not confirmed')) {
           setError('Please verify your email address before signing in. Check your inbox for a verification link.')
           setShowResendButton(true)
+          setVerificationEmail(signInEmail)
         } else {
           setError(error.message)
         }
       } else if (data.user) {
-        setSuccess('Successfully signed in!')
-        // Check onboarding status and redirect
-        const { data: onboarding } = await supabase
-          .from('onboarding')
-          .select('completed')
-          .eq('user_id', data.user.id)
-          .single()
-
-        if (onboarding?.completed) {
-          router.push('/app/dashboard')
-        } else {
-          router.push('/onboarding')
-        }
+        setSuccess('Successfully signed in! Redirecting...')
+        
+        // Skip the onboarding check for now to avoid database issues
+        // Just redirect to onboarding page - it will handle the check there
+        router.push('/onboarding')
       }
     } catch (error) {
-      setError('An unexpected error occurred')
+      console.error('Sign in error:', error)
+      setError('An unexpected error occurred during sign in. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleResendVerification = async () => {
-    if (!signInEmail) {
+    const email = verificationEmail || signInEmail
+    if (!email) {
       setError('Please enter your email address first')
       return
     }
@@ -104,7 +93,7 @@ export default function AuthPage() {
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email: signInEmail,
+        email: email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
@@ -159,22 +148,19 @@ export default function AuthPage() {
         setError(error.message)
       } else if (data.user && !data.session) {
         // User created but email confirmation required
+        setShowEmailVerification(true)
+        setVerificationEmail(signUpEmail)
         setSuccess(
-          'Account created successfully! Please check your email and click the verification link to activate your account. You can then sign in.'
+          'Account created successfully! Please check your email and click the verification link to activate your account.'
         )
         // Clear form
         setSignUpEmail('')
         setSignUpPassword('')
         setSignUpConfirmPassword('')
         setSignUpFullName('')
-        // Switch to sign in tab
-        const signinTab = document.querySelector('[data-value="signin"]') as HTMLElement
-        if (signinTab) {
-          signinTab.click()
-        }
       } else if (data.user && data.session) {
         // User created and automatically signed in (email confirmation disabled)
-        setSuccess('Account created successfully! You are now signed in.')
+        setSuccess('Account created successfully! You are now signed in. Redirecting...')
         // Check onboarding status and redirect
         const { data: onboarding } = await supabase
           .from('onboarding')
@@ -183,7 +169,7 @@ export default function AuthPage() {
           .single()
 
         if (onboarding?.completed) {
-          router.push('/app/dashboard')
+          router.push('/dashboard')
         } else {
           router.push('/onboarding')
         }
@@ -214,6 +200,78 @@ export default function AuthPage() {
     } catch (error) {
       setError('An unexpected error occurred during Google sign in')
     }
+  }
+
+  const handleBackToSignIn = () => {
+    setShowEmailVerification(false)
+    setActiveTab('signin')
+    setError(null)
+    setSuccess(null)
+  }
+
+  // Email verification view
+  if (showEmailVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-center mb-4">
+              <Mail className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-center">Check Your Email</CardTitle>
+            <CardDescription className="text-center">
+              We've sent a verification link to <strong>{verificationEmail}</strong>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {success && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="space-y-4 text-center">
+              <div className="space-y-2">
+                <h3 className="font-semibold">Next Steps:</h3>
+                <ol className="text-sm text-muted-foreground space-y-1 text-left">
+                  <li>1. Check your email inbox (and spam folder)</li>
+                  <li>2. Click the verification link in the email</li>
+                  <li>3. Return here and sign in with your account</li>
+                </ol>
+              </div>
+              
+              <div className="space-y-2">
+                <Button
+                  onClick={handleResendVerification}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Resend verification email'
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={handleBackToSignIn}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Sign In
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -275,7 +333,7 @@ export default function AuthPage() {
           </div>
 
           {/* Tabs for Sign In/Sign Up */}
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -336,7 +394,10 @@ export default function AuthPage() {
                 </Button>
                 
                 {showResendButton && (
-                  <div className="text-center">
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Need to verify your email?
+                    </p>
                     <Button
                       type="button"
                       variant="outline"
