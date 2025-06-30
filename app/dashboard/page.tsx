@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import GeneratorCard from "@/components/Dashboard/generator-card";
-
+import { useAuth } from "@/lib/auth-context";
 
 export default function DashboardPage() {
+  const { userProfile } = useAuth();
+  const name = userProfile?.full_name || "User";
+
   const generators = [
     {
       tag: "Content",
@@ -31,18 +36,25 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex items-center justify-center w-full gap-12">
-      {generators.map((generator, index) => (
-        <Link href={generator.href} key={index}>
-            <GeneratorCard
-              tag={generator.tag}
-              title={generator.title}
-              description={generator.description}
-              imageUrl={generator.imageUrl}
-              hoverTheme={generator.hoverTheme}
-            />
-        </Link>
-      ))}
+    <div className="relative flex flex-col w-full items-center gap-8">
+      {/* Welcome message at top left below logo */}
+      <div className="absolute left-8" style={{ top: 0 }}>
+        <h1 className="text-xl md:text-2xl font-bold mb-1">Welcome back, {name}</h1>
+        <p className="text-muted-foreground text-base">Your AI content team is ready to create</p>
+      </div>
+      <div className="flex items-center justify-center w-full gap-12 mt-24">
+        {generators.map((generator, index) => (
+          <Link href={generator.href} key={index}>
+              <GeneratorCard
+                tag={generator.tag}
+                title={generator.title}
+                description={generator.description}
+                imageUrl={generator.imageUrl}
+                hoverTheme={generator.hoverTheme}
+              />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
